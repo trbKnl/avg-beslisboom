@@ -119,12 +119,12 @@ function ConnectorOverlay({ visibleNodes, nodeRefs, containerRef, animatingNodeI
   const [lines, setLines] = useState([]);
 
   useEffect(() => {
-    // Recalculate connector positions after DOM updates
     const timer = requestAnimationFrame(() => {
       if (!containerRef.current) return;
       const containerRect = containerRef.current.getBoundingClientRect();
       const newLines = [];
 
+      // Chosen path connectors
       for (let i = 0; i < visibleNodes.length - 1; i++) {
         const fromId = visibleNodes[i].id;
         const toId = visibleNodes[i + 1].id;
@@ -140,6 +140,30 @@ function ConnectorOverlay({ visibleNodes, nodeRefs, containerRef, animatingNodeI
             toY: toRect.top - containerRect.top,
             chosen: true,
             animate: toId === animatingNodeId,
+            stub: false,
+          });
+        }
+      }
+
+      // Stub connectors for completed question nodes' unchosen answers
+      for (const entry of visibleNodes) {
+        if (entry.state !== 'completed' || entry.node.type !== 'question') continue;
+        const fromEl = nodeRefs.current[entry.id];
+        if (!fromEl) continue;
+        const fromRect = fromEl.getBoundingClientRect();
+        const fromY = fromRect.bottom - containerRect.top;
+
+        const unchosenCount = entry.node.answers.length - 1;
+        if (unchosenCount <= 0) continue;
+
+        for (let j = 0; j < unchosenCount; j++) {
+          newLines.push({
+            key: `${entry.id}-stub-${j}`,
+            fromY,
+            toY: fromY + 20,
+            chosen: false,
+            animate: false,
+            stub: true,
           });
         }
       }
@@ -165,6 +189,7 @@ function ConnectorOverlay({ visibleNodes, nodeRefs, containerRef, animatingNodeI
           containerWidth={containerRef.current?.offsetWidth ?? 672}
           animate={line.animate}
           chosen={line.chosen}
+          stub={line.stub}
         />
       ))}
     </svg>

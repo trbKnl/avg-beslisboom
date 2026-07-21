@@ -155,6 +155,7 @@ function InfoCard({ node, onAnswer }) {
 function CompletedCard({ node, chosenAnswer, onRewind }) {
   return (
     <div
+      className="hover-lift"
       style={completedCardStyle}
       onClick={onRewind}
       role="button"
