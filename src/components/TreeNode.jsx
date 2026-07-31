@@ -77,12 +77,41 @@ function QuestionCard({ node, onAnswer }) {
           fontWeight: 700,
           color: 'var(--color-text-dark)',
           fontSize: '1.25rem',
-          marginBottom: '16px',
+          marginBottom: node.description || node.note ? '12px' : '16px',
           lineHeight: 1.3,
         }}
       >
         {node.text}
       </h2>
+      {node.description && (
+        <p
+          style={{
+            color: 'var(--color-text-body)',
+            fontSize: '0.9rem',
+            lineHeight: 1.6,
+            marginBottom: '16px',
+            backgroundColor: 'var(--color-bg-info)',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            borderLeft: '3px solid var(--color-accent-gold)',
+          }}
+        >
+          {node.description}
+        </p>
+      )}
+      {node.note && (
+        <p
+          style={{
+            color: 'var(--color-text-muted)',
+            fontSize: '0.85rem',
+            fontStyle: 'italic',
+            lineHeight: 1.5,
+            marginBottom: '16px',
+          }}
+        >
+          {node.note}
+        </p>
+      )}
       <div className="flex flex-col gap-2">
         {node.answers.map((answer) => (
           <button
@@ -218,7 +247,7 @@ function OutcomeCard({ node, onReset }) {
         className="cursor-pointer transition-colors"
         style={{
           backgroundColor: 'transparent',
-          color: 'var(--color-accent-red)',
+          color: 'var(--color-primary)',
           fontFamily: 'var(--font-body)',
           fontWeight: 700,
           padding: '8px 0',

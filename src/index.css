@@ -84,3 +84,23 @@
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(37,42,52,0.12);
 }
+
+/* ---- Foldout / details styling ---- */
+.details-foldout summary::-webkit-details-marker {
+  display: none;
+}
+
+.details-chevron {
+  display: inline-block;
+  font-size: 0.7rem;
+  transition: transform 0.2s ease;
+  color: var(--color-text-muted);
+}
+
+.details-foldout[open] .details-chevron {
+  transform: rotate(90deg);
+}
+
+.details-foldout summary:hover {
+  background-color: var(--color-bg-muted);
+}
