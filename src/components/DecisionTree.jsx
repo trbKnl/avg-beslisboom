@@ -34,6 +34,11 @@ const risks = [
     description:
       'Sharing donated data with other researchers, institutions, or commercial partners introduces additional risks. Consider whether data sharing agreements are in place, whether recipients offer adequate data protection, and whether participants were informed about potential data sharing. Distinguish between sharing for scientific purposes (which may benefit from certain GDPR exemptions) and commercial purposes (which typically require explicit consent).',
   },
+  {
+    title: 'Consent',
+    description:
+      'If you are collecting personal data in your data donation study, you need to obtain consent from participants as a legal basis for processing. If your study involves special category data — such as health data, political opinions, religious beliefs, or data concerning ethnicity — you are required to obtain explicit consent. Explicit consent means that participants must make a clear, affirmative statement (not just a pre-ticked box) specifically agreeing to the processing of these sensitive categories.',
+  },
 ];
 
 const measures = [
@@ -240,6 +245,7 @@ export default function DecisionTree() {
             </details>
           ))}
         </div>
+
       </section>
 
       {/* Mitigating measures section */}
@@ -308,6 +314,7 @@ export default function DecisionTree() {
           ))}
         </div>
       </section>
+
     </div>
   );
 }
