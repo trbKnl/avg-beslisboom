@@ -1,12 +1,1167 @@
 <!DOCTYPE html>
-<html lang="nl">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>DPIA Decision Tree</title>
-  </head>
-  <body>
-    <div id="avg-beslisboom"></div>
-    <script type="module" src="/src/index.jsx"></script>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ethics Wizard — Data Donation</title>
+  <link rel="stylesheet" href="https://datadonation.eu/assets/css/main.css">
+
+  <style>
+  /* ==========================================================================
+     ETHICS WIZARD + STUDY CHARACTERISTICS
+
+     Everything below is namespaced under .ethics-wizard / .study-chars and
+     uses --dd-* custom properties, so it can be lifted into main.css as-is.
+
+     Contents
+       1. Tokens
+       2. Shared primitives
+       3. Wizard — progress
+       4. Wizard — card & screens
+       5. Wizard — content blocks
+       6. Wizard — controls
+       7. Study characteristics
+       8. Responsive, reduced motion, print
+     ========================================================================== */
+
+
+  /* --- 1. Tokens ---------------------------------------------------------- */
+
+  :root {
+    /* Palette. Every colour in this stylesheet comes from here. Tints are
+       derived with color-mix() so a brand change only needs one edit. */
+    --dd-blue:      #4272ef;
+    --dd-red:       #ff5e5e;
+    --dd-ink:       #252a34;
+    --dd-ink-muted: #6a6a6a;
+    --dd-line:      #e6e6e6;
+    --dd-surface:   #fff;
+    --dd-sunken:    #f5f7fb;
+
+    /* Type. `--dd-font-display` is assumed to be loaded by main.css. */
+    --dd-font-display: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --dd-size-2xs: 11px;
+    --dd-size-xs:  12px;
+    --dd-size-sm:  13px;
+    --dd-size-md:  14px;
+    --dd-size-lg:  15px;
+    --dd-size-2xl: 23px;
+    --dd-size-3xl: 26px;
+
+    --dd-radius-sm: 8px;
+    --dd-radius-md: 10px;
+    --dd-radius-lg: 14px;
+    --dd-radius-xl: 22px;
+
+    --dd-shadow-card:  0 1px 2px rgb(0 0 0 / 0.04), 0 26px 50px -28px rgb(37 42 52 / 0.3);
+    --dd-shadow-panel: 0 1px 2px rgb(30 42 46 / 0.04), 0 8px 24px rgb(30 42 46 / 0.06);
+
+    --dd-motion-fast:   150ms;
+    --dd-motion-normal: 250ms;
+    --dd-motion-slow:   300ms;
+
+    /* Progress geometry. The dot overlaps the track, so the negative margin
+       and the track inset are both derived from these two values. */
+    --dd-dot-size:      20px;
+    --dd-track-height:  2px;
+  }
+
+
+  /* --- 2. Shared primitives ----------------------------------------------- */
+
+  .dd-icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .dd-visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    margin: -1px; padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .ethics-wizard :focus-visible,
+  .study-chars :focus-visible {
+    outline: 2px solid var(--dd-blue);
+    outline-offset: 3px;
+  }
+
+  /* Headings receive focus programmatically after each step; don't ring them
+     for mouse users. */
+  .ethics-wizard__title:focus:not(:focus-visible) { outline: none; }
+
+
+  /* --- 3. Wizard — progress ------------------------------------------------ */
+
+  .ethics-wizard {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 56px 24px 48px;
+  }
+
+  .ethics-wizard__progress {
+    margin-bottom: 40px;
+    padding: 0 6px;
+  }
+
+  .ethics-wizard__track {
+    position: relative;
+    height: var(--dd-track-height);
+    /* Inset by half a dot so the track starts and ends at the dot centres. */
+    margin: 0 calc(var(--dd-dot-size) / 2);
+    border-radius: var(--dd-track-height);
+    background: var(--dd-line);
+  }
+
+  .ethics-wizard__track-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: inherit;
+    background: var(--dd-blue);
+    transition: width var(--dd-motion-slow) ease;
+  }
+
+  .ethics-wizard__dots {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    /* Pull the dots up so they straddle the track. */
+    margin-top: calc((var(--dd-track-height) - var(--dd-dot-size)) / 2);
+  }
+
+  .ethics-wizard__dot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--dd-dot-size);
+    height: var(--dd-dot-size);
+    border: 2px solid var(--dd-line);
+    border-radius: 50%;
+    background: var(--dd-surface);
+    color: var(--dd-ink-muted);
+    font-family: var(--dd-font-display);
+    font-size: var(--dd-size-2xs);
+    font-weight: 700;
+    /* Create a gap between the track line and the dot edge. */
+    box-shadow: 0 0 0 5px var(--dd-surface);
+    transition: background var(--dd-motion-fast) ease,
+                border-color var(--dd-motion-fast) ease,
+                box-shadow var(--dd-motion-fast) ease;
+  }
+
+  .ethics-wizard__dot--done {
+    border-color: var(--dd-blue);
+    background: var(--dd-blue);
+    color: var(--dd-surface);
+    box-shadow: 0 0 0 5px var(--dd-surface);
+  }
+
+  .ethics-wizard__dot--current {
+    border-color: var(--dd-blue);
+    color: var(--dd-blue);
+    box-shadow: 0 0 0 5px var(--dd-surface),
+                0 0 0 9px color-mix(in srgb, var(--dd-blue) 15%, transparent);
+  }
+
+
+  /* --- 4. Wizard — card & screens ------------------------------------------ */
+
+  .ethics-wizard__card {
+    /* Default tone. Outcome screens override --dd-tone / --dd-tone-label,
+       and the eyebrow, badge and icon all inherit from them. */
+    --dd-tone: var(--dd-blue);
+    --dd-tone-label: var(--dd-tone);
+
+    padding: 40px;
+    border-radius: var(--dd-radius-xl);
+    background: var(--dd-surface);
+    box-shadow: var(--dd-shadow-card);
+  }
+
+  .ethics-wizard__screen {
+    animation: dd-fade var(--dd-motion-normal) ease;
+  }
+
+  .ethics-wizard__screen[hidden] { display: none; }
+
+  .ethics-wizard__screen--accent {
+    padding-left: 20px;
+    border-left: 3px solid var(--dd-blue);
+  }
+
+  .ethics-wizard__screen--caution { --dd-tone: var(--dd-red); }
+  .ethics-wizard__screen--good    { --dd-tone-label: var(--dd-ink); }
+
+  @keyframes dd-fade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+
+  /* --- 5. Wizard — content blocks ------------------------------------------ */
+
+  .ethics-wizard__eyebrow {
+    margin: 0 0 10px;
+    color: var(--dd-tone-label);
+    font-family: var(--dd-font-display);
+    font-size: var(--dd-size-xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .ethics-wizard__badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 9px;
+    margin-bottom: 18px;
+    border-radius: var(--dd-radius-md);
+    background: color-mix(in srgb, var(--dd-tone) 10%, transparent);
+    color: var(--dd-tone);
+  }
+
+  .ethics-wizard__title {
+    max-width: 30ch;
+    margin: 0 0 14px;
+    color: var(--dd-ink);
+    font-family: var(--dd-font-display);
+    font-size: var(--dd-size-2xl);
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  .ethics-wizard__body {
+    max-width: 54ch;
+    margin: 0 0 8px;
+    color: var(--dd-ink-muted);
+    font-size: var(--dd-size-md);
+    line-height: 1.65;
+  }
+
+  .ethics-wizard__body a {
+    color: var(--dd-blue);
+    font-weight: 700;
+  }
+
+  /* Marks a term defined elsewhere on the page. */
+  .ethics-wizard__term {
+    font-style: normal;
+    border-bottom: 1.5px dotted currentColor;
+  }
+
+  .ethics-wizard__uni-list {
+    max-width: 40ch;
+    margin: 0 0 24px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ethics-wizard__uni-list li {
+    padding: 10px 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius-sm);
+    background: var(--dd-sunken);
+    font-size: var(--dd-size-md);
+  }
+
+  .ethics-wizard__uni-list li:last-child { margin-bottom: 0; }
+
+  .ethics-wizard__callout {
+    margin-top: 22px;
+    padding: 16px 18px;
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius-md);
+    background: var(--dd-sunken);
+    color: var(--dd-ink-muted);
+    font-size: var(--dd-size-sm);
+    line-height: 1.55;
+  }
+
+  .ethics-wizard__callout strong { color: var(--dd-ink); }
+
+
+  /* --- 6. Wizard — controls ------------------------------------------------ */
+
+  .ethics-wizard__choices {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+
+  .ethics-wizard__choice {
+    --dd-choice: var(--dd-line);
+
+    flex: 1;
+    padding: 16px 18px;
+    border: 1.5px solid var(--dd-line);
+    border-radius: var(--dd-radius-md);
+    background: var(--dd-surface);
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--dd-motion-fast) ease,
+                background var(--dd-motion-fast) ease;
+  }
+
+  .ethics-wizard__choice--yes { --dd-choice: var(--dd-blue); }
+  .ethics-wizard__choice--no  { --dd-choice: var(--dd-blue); }
+
+  .ethics-wizard__choice:hover,
+  .ethics-wizard__choice.is-selected {
+    border-color: var(--dd-choice);
+    background: color-mix(in srgb, var(--dd-choice) 8%, transparent);
+  }
+
+  .ethics-wizard__choice strong {
+    display: block;
+    margin-bottom: 2px;
+    font-size: var(--dd-size-lg);
+  }
+
+  .ethics-wizard__choice span {
+    color: var(--dd-ink-muted);
+    font-size: var(--dd-size-xs);
+  }
+
+  .ethics-wizard__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--dd-line);
+  }
+
+  .ethics-wizard__footer:empty { display: none; }
+
+  .ethics-wizard__note {
+    color: var(--dd-ink-muted);
+    font-size: var(--dd-size-xs);
+  }
+
+  .ethics-wizard__btn {
+    padding: 11px 20px;
+    border: none;
+    border-radius: var(--dd-radius-sm);
+    font-family: var(--dd-font-display);
+    font-size: var(--dd-size-md);
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity var(--dd-motion-fast) ease,
+                color var(--dd-motion-fast) ease;
+  }
+
+  .ethics-wizard__btn--primary {
+    background: var(--dd-blue);
+    color: var(--dd-surface);
+  }
+
+  .ethics-wizard__btn--primary:hover { opacity: 0.9; }
+
+  .ethics-wizard__btn--ghost {
+    padding-inline: 0;
+    background: transparent;
+    color: var(--dd-ink-muted);
+  }
+
+  .ethics-wizard__btn--ghost:hover { color: var(--dd-ink); }
+
+
+  /* --- 7. Study characteristics -------------------------------------------- */
+
+  .study-chars {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 24px 90px;
+  }
+
+  .study-chars__title {
+    margin: 0 0 14px;
+    color: var(--dd-ink);
+    font-family: var(--dd-font-display);
+    font-size: var(--dd-size-3xl);
+    font-weight: 800;
+  }
+
+  .study-chars__intro {
+    max-width: 62ch;
+    margin: 0 0 36px;
+    color: var(--dd-ink-muted);
+    font-size: var(--dd-size-md);
+    line-height: 1.7;
+  }
+
+  .study-chars__list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .study-chars__item {
+    border: 1px solid transparent;
+    border-radius: var(--dd-radius-lg);
+    background: var(--dd-surface);
+    box-shadow: var(--dd-shadow-panel);
+    overflow: hidden;
+  }
+
+  .study-chars__item[open] {
+    border-color: color-mix(in srgb, var(--dd-blue) 20%, transparent);
+  }
+
+  .study-chars__summary {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 22px;
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+  }
+
+  .study-chars__summary::-webkit-details-marker { display: none; }
+  .study-chars__summary:hover { background: var(--dd-sunken); }
+
+  .study-chars__icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 8px;
+    border-radius: var(--dd-radius-md);
+    background: color-mix(in srgb, var(--dd-blue) 10%, transparent);
+    color: var(--dd-blue);
+  }
+
+  .study-chars__item-title {
+    flex: 1;
+    color: var(--dd-ink);
+    font-family: var(--dd-font-display);
+    font-size: var(--dd-size-lg);
+    font-weight: 700;
+  }
+
+  .study-chars__chevron {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    color: var(--dd-ink-muted);
+    transition: transform var(--dd-motion-fast) ease;
+  }
+
+  .study-chars__item[open] .study-chars__chevron { transform: rotate(180deg); }
+
+  .study-chars__body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 22px 24px;
+  }
+
+  .study-chars__subbox {
+    padding: 16px 18px;
+    border: 1px solid var(--dd-line);
+    border-radius: var(--dd-radius-md);
+    background: var(--dd-sunken);
+  }
+
+  .study-chars__subbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    color: var(--dd-ink-muted);
+    font-family: var(--dd-font-display);
+    font-size: var(--dd-size-2xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .study-chars__subbox-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--dd-blue);
+    color: var(--dd-surface);
+    font-size: var(--dd-size-2xs);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .study-chars__subbox p {
+    margin: 0;
+    color: var(--dd-ink);
+    font-size: var(--dd-size-md);
+    line-height: 1.65;
+  }
+
+
+  /* --- 8. Responsive, reduced motion, print -------------------------------- */
+
+  @media (max-width: 600px) {
+    .ethics-wizard          { padding: 32px 16px; }
+    .ethics-wizard__card    { padding: 24px; }
+    .ethics-wizard__choices { flex-direction: column; }
+    .study-chars            { padding: 0 16px 60px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ethics-wizard *,
+    .study-chars * {
+      animation-duration: 1ms !important;
+      transition-duration: 1ms !important;
+    }
+  }
+
+  @media print {
+    .ethics-wizard__progress,
+    .ethics-wizard__footer,
+    .study-chars__chevron { display: none !important; }
+
+    .ethics-wizard__card,
+    .study-chars__item {
+      border: 1px solid var(--dd-line);
+      box-shadow: none;
+      break-inside: avoid;
+    }
+  }
+  </style>
+</head>
+
+<body class="site-shell">
+
+<!-- ==========================================================================
+     CONTENT
+
+     All user-facing text lives in the two JSON blocks below — including
+     eyebrows, button labels and icon names. Nothing in the <script> at the
+     bottom of this file needs editing to change copy.
+
+     Text fields are inserted as HTML, so inline <a>, <strong>, <em> and <br>
+     work. That is safe because the content is authored here. If this data
+     ever comes from a CMS or API, escape it before insertion.
+
+     The wizard flow is a directed graph: each screen names its own successors
+     via `next` (statements) or `yes.next` / `no.next` (questions). There is no
+     `back` field — going back is handled by browser history.
+     ========================================================================== -->
+
+<script type="application/json" id="wizard-data">
+[
+  {
+    "id": "intro",
+    "type": "statement",
+    "progressStep": 0,
+    "eyebrow": "Ethical support · Free tool",
+    "icon": "shield",
+    "title": "Preparing your ethical review board application",
+    "body": "Are you a researcher based in the Netherlands who makes use of the free data donation service on the Next platform? This tool will guide you through preparing your application to the ethical review board.",
+    "footerNote": "Takes about 3 minutes",
+    "nextLabel": "Start →",
+    "next": "q1"
+  },
+
+  {
+    "id": "q1",
+    "type": "question",
+    "progressStep": 1,
+    "icon": "monitor",
+    "title": "Do you make use of the data donation software service on the Next platform?",
+    "body": "This determines whether the guidance on this page is written specifically for your setup.",
+    "yes": { "label": "Yes", "sublabel": "I use the Next platform", "next": "note-fair-use" },
+    "no":  { "label": "No",  "sublabel": "I use something else, or haven't decided yet", "next": "out-other-platform" }
+  },
+  {
+    "id": "out-other-platform",
+    "type": "outcome",
+    "tone": "caution",
+    "progressStep": 1,
+    "eyebrow": "General guidance",
+    "icon": "warning",
+    "title": "This page is tailored to the Next platform",
+    "body": "The information here is written specifically for setting up a data donation study on the Next platform. That said, most of it applies to any data donation study — so feel free to use whatever is useful for your project.",
+    "callout": "<strong>Suggested text for your application:</strong><br>“This study does not use the Next platform's data donation service. The applicant has reviewed the general guidance on [tool name] and adapted the relevant sections accordingly.”",
+    "guidanceLabel": "Browse general guidance anyway →"
+  },
+  {
+    "id": "note-fair-use",
+    "type": "statement",
+    "accentBar": true,
+    "progressStep": 1,
+    "eyebrow": "Before you continue",
+    "icon": "document",
+    "title": "Your study needs to comply with the Eyra Fair Use Policy",
+    "body": "To use the data donation service, your study should comply with the <a href=\"https://eyra.notion.site/Fair-Use-Policy-Data-Donation-23b2fc5df3ad80a5a971fa8b7dc87ee3\" target=\"_blank\" rel=\"noopener\">Eyra Fair Use Policy</a>. By following the guidance below, your study will comply with this policy.",
+    "nextLabel": "Continue →",
+    "next": "q2"
+  },
+
+  {
+    "id": "q2",
+    "type": "question",
+    "progressStep": 2,
+    "icon": "building",
+    "title": "Do you use the data donation software service for free using a license provided by ODISSEI?",
+    "body": "This determines whether the ODISSEI User Policy applies to your study.",
+    "yes": { "label": "Yes", "sublabel": "I use the free ODISSEI license", "next": "note-odissei-policy" },
+    "no":  { "label": "No",  "sublabel": "I don't use an ODISSEI license", "next": "out-no-odissei-license" }
+  },
+  {
+    "id": "out-no-odissei-license",
+    "type": "outcome",
+    "tone": "caution",
+    "progressStep": 2,
+    "eyebrow": "General guidance",
+    "icon": "warning",
+    "title": "This page is tailored to the ODISSEI license",
+    "body": "The information here is tailored towards setting up a data donation study using the free license provided by ODISSEI. That said, most of it applies to data donation studies more broadly — so feel free to use whatever is relevant to your project.",
+    "guidanceLabel": "Browse general guidance anyway →"
+  },
+  {
+    "id": "note-odissei-policy",
+    "type": "statement",
+    "accentBar": true,
+    "progressStep": 2,
+    "eyebrow": "Before you continue",
+    "icon": "document",
+    "title": "Your study needs to comply with the ODISSEI User Policy",
+    "body": "To use the data donation service for free using a license provided by ODISSEI, your study must comply with the <a href=\"https://odissei-data.nl/odissei-user-policy/\" target=\"_blank\" rel=\"noopener\">ODISSEI User Policy</a>. By following the guidance below, your study will comply with this policy.",
+    "nextLabel": "Continue →",
+    "next": "q3"
+  },
+
+  {
+    "id": "q3",
+    "type": "question",
+    "progressStep": 3,
+    "icon": "database",
+    "title": "In your data donation study, will you be collecting personal data?",
+    "body": "Personal data is any information that can be traced back to an individual — <span class=\"ethics-wizard__term\">directly</span> or <span class=\"ethics-wizard__term\">indirectly</span>.",
+    "yes": { "label": "Yes", "sublabel": "Personal data will be collected", "next": "note-dpia" },
+    "no":  { "label": "No",  "sublabel": "No personal data collected", "next": "out-no-personal-data" }
+  },
+  {
+    "id": "out-no-personal-data",
+    "type": "outcome",
+    "tone": "good",
+    "progressStep": 3,
+    "eyebrow": "Good news",
+    "icon": "check",
+    "title": "This should be a straightforward application",
+    "body": "Applying for ethics approval should be relatively straightforward if you're not collecting personal data. Use any guidance below that's still relevant to your project.",
+    "callout": "<strong>Suggested text for your application:</strong><br>“This study does not collect personal data. Data donated via the Next platform will be [processed / aggregated / anonymised] in a way that does not allow individuals to be identified, directly or indirectly.”",
+    "guidanceLabel": "Browse further guidance anyway →"
+  },
+  {
+    "id": "note-dpia",
+    "type": "statement",
+    "accentBar": true,
+    "progressStep": 3,
+    "eyebrow": "Before you continue",
+    "icon": "document",
+    "title": "You'll need a DPIA — but you may not have to write one",
+    "body": "Your ethical review board will want a Data Protection Impact Assessment (DPIA) performed on the data donation service on the Next platform. Fortunately, many universities in the Netherlands have already carried one out, so you may not need to do it yourself.",
+    "nextLabel": "Continue →",
+    "next": "q4"
+  },
+
+  {
+    "id": "q4",
+    "type": "question",
+    "progressStep": 4,
+    "icon": "building",
+    "title": "Is your university in the list below?",
+    "uniList": [
+      "University of Amsterdam (UvA)",
+      "VU Amsterdam (VU)",
+      "Utrecht University (UU)"
+    ],
+    "yes": { "label": "Yes", "sublabel": "My university is listed", "next": "out-ready" },
+    "no":  { "label": "No",  "sublabel": "My university isn't listed", "next": "out-dpia-needed" }
+  },
+  {
+    "id": "out-dpia-needed",
+    "type": "outcome",
+    "tone": "caution",
+    "progressStep": 4,
+    "eyebrow": "Next step",
+    "icon": "warning",
+    "title": "You'll likely need to carry out a DPIA",
+    "body": "This means that very likely you will have to carry out a DPIA. We can support you here — reach out to <a href=\"mailto:datadonation@uu.nl\">datadonation@uu.nl</a>.",
+    "guidanceLabel": "Browse further guidance →"
+  },
+  {
+    "id": "out-ready",
+    "type": "outcome",
+    "tone": "good",
+    "progressStep": 4,
+    "eyebrow": "Good news",
+    "icon": "check",
+    "title": "You can start your application for ethics approval",
+    "body": "In the guidance below, identify which characteristics apply to your study and follow the suggestions there to comply with the Eyra Fair Use Policy and ODISSEI User Policy.",
+    "guidanceLabel": "View full guidance →"
+  }
+]
+</script>
+
+<script type="application/json" id="chars-data">
+{
+  "title": "Study characteristics",
+  "intro": "Identify which of the following characteristics apply to your data donation study. Open each item to read the explanation and find example text you can use in your ethics application and participant communication.",
+
+  "sections": [
+    {
+      "key": "explanation",
+      "label": "Explanation — what is it, why does it matter?",
+      "placeholder": "Placeholder — add an explanation of what this characteristic means and why it matters for the ethics application."
+    },
+    {
+      "key": "application",
+      "label": "Example text for your ethics application",
+      "placeholder": "Placeholder — add example wording researchers can adapt for their ethical review board application."
+    },
+    {
+      "key": "participant",
+      "label": "Example text for participant communication",
+      "placeholder": "Placeholder — add example wording for information letters, consent forms, or privacy statements."
+    }
+  ],
+
+  "items": [
+    { "id": "study-purpose", "title": "Study purpose", "icon": "target" },
+
+    {
+      "id": "personal-data",
+      "title": "Personal data",
+      "icon": "lock",
+      "explanation": "Personal data is any information that can be traced back to an individual, either directly (like a name or an email address) or indirectly (like a combination of details that, together, make someone identifiable).",
+      "application": "This study collects personal data via the Next platform, including [specify: e.g. usernames, timestamps, or other identifiers present in the donated data]. A Data Protection Impact Assessment for the Next platform has been carried out by [institution]. Personal data will be processed in line with the university's data management protocol, stored on [storage location], and retained for [retention period].",
+      "participant": "When you donate your data, some of the information may be considered personal data — meaning it could be traced back to you, either directly or indirectly. We handle this information carefully and in accordance with the GDPR. [Describe how it is stored, who can access it, how long it is kept, and how it will be anonymised or pseudonymised where possible.]"
+    },
+
+    { "id": "combining-data",     "title": "Combining data",          "icon": "merge" },
+    { "id": "enriching-data",     "title": "Enriching data",          "icon": "sparkle" },
+    { "id": "data-other-persons", "title": "Data from other persons", "icon": "people" },
+    { "id": "secondary-use",      "title": "Secondary data use",      "icon": "archive" },
+    { "id": "third-party-access", "title": "Third party data access",  "icon": "key" },
+    { "id": "scraping",           "title": "Scraping",                "icon": "scrape" }
+  ]
+}
+</script>
+
+
+<!-- ==========================================================================
+     STRUCTURE
+     ========================================================================== -->
+
+<main id="main-content" class="site-main">
+
+  <section class="ethics-wizard" id="ethics-wizard" aria-label="Ethics application wizard">
+    <!-- Decorative: the current step is also stated in words on each screen. -->
+    <div class="ethics-wizard__progress" aria-hidden="true">
+      <div class="ethics-wizard__track">
+        <div class="ethics-wizard__track-fill" id="ew-track-fill"></div>
+      </div>
+      <div class="ethics-wizard__dots" id="ew-dots"></div>
+    </div>
+
+    <div class="ethics-wizard__card" id="ew-card">
+      <noscript>
+        <p class="ethics-wizard__body">
+          This step-by-step tool needs JavaScript. The full guidance is still
+          available below, and you can email
+          <a href="mailto:datadonation@uu.nl">datadonation@uu.nl</a> with questions.
+        </p>
+      </noscript>
+    </div>
+  </section>
+
+  <section class="study-chars" id="study-chars" aria-labelledby="study-chars-title"></section>
+
+</main>
+
+
+<!-- ==========================================================================
+     BEHAVIOUR
+
+       1. Helpers
+       2. Icons
+       3. Wizard — markup templates
+       4. Wizard — progress indicator
+       5. Wizard — navigation & rendering
+       6. Study characteristics
+       7. Boot
+
+     The two sections initialise independently: malformed data in one JSON
+     block logs an error and leaves the other section working.
+     ========================================================================== -->
+
+<script>
+(() => {
+  'use strict';
+
+  /* --- 1. Helpers -------------------------------------------------------- */
+
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const scrollBehavior = () => (reducedMotion.matches ? 'auto' : 'smooth');
+
+  function readJson(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) {
+      console.error(`[data] Missing <script id="${elementId}">.`);
+      return null;
+    }
+    try {
+      return JSON.parse(el.textContent);
+    } catch (err) {
+      console.error(`[data] #${elementId} is not valid JSON:`, err);
+      return null;
+    }
+  }
+
+
+  /* --- 2. Icons ---------------------------------------------------------- */
+
+  /* Path data only. Stroke colour comes from the parent via currentColor, so
+     brand colours never appear in this file's JavaScript. */
+  const ICON_PATHS = {
+    monitor:  '<rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 20h8M12 18v2"/>',
+    building: '<path d="M4 21V9l8-5 8 5v12M9 21v-6h6v6"/>',
+    database: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    shield:   '<path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7l8-4z"/>',
+    check:    '<path d="M20 6L9 17l-5-5"/>',
+    warning:  '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>',
+    document: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+    target:   '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/>',
+    lock:     '<circle cx="12" cy="16" r="1"/><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+    merge:    '<path d="M6 3v6a4 4 0 0 0 4 4h4M14 9l4 4-4 4"/>',
+    sparkle:  '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M17.5 15.5L20 18M18 6l-2.5 2.5M8.5 15.5L6 18"/>',
+    people:   '<circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2 20c0-3 2.5-5 6-5s6 2 6 5M12 20c0-2.5 2-4.5 5-4.5s5 2 5 4.5"/>',
+    archive:  '<rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v9a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9M10 13h4"/>',
+    key:      '<circle cx="8" cy="15" r="3"/><path d="M10.5 12.5L20 3M16 7l2 2M13 10l2 2"/>',
+    scrape:   '<path d="M4 4l7 16 2.5-6.5L20 11 4 4z"/>',
+  };
+
+  function icon(name) {
+    if (!ICON_PATHS[name]) console.warn(`[icon] Unknown icon "${name}".`);
+    return `<svg class="dd-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+              aria-hidden="true" focusable="false">${ICON_PATHS[name] ?? ''}</svg>`;
+  }
+
+
+  /* --- 3. Wizard — markup templates -------------------------------------- */
+
+  const note      = (text) => `<span class="ethics-wizard__note">${text}</span>`;
+  const ghostBtn  = (label, action) => button('ghost', label, action);
+  const primaryBtn = (label, action, target) => button('primary', label, action, target);
+
+  function button(variant, label, action, target) {
+    const targetAttr = target ? ` data-target="${target}"` : '';
+    return `<button type="button" class="ethics-wizard__btn ethics-wizard__btn--${variant}"
+              data-action="${action}"${targetAttr}>${label}</button>`;
+  }
+
+  /* Every screen has the same head: eyebrow, badge, title, optional body.
+     The title is focusable so it can be announced after each step change. */
+  function head(screen) {
+    return `
+      <p class="ethics-wizard__eyebrow">${screen.eyebrow}</p>
+      <span class="ethics-wizard__badge">${icon(screen.icon)}</span>
+      <h2 class="ethics-wizard__title" tabindex="-1">${screen.title}</h2>
+      ${screen.body ? `<p class="ethics-wizard__body">${screen.body}</p>` : ''}`;
+  }
+
+  const footer = (left = '', right = '') =>
+    `<div class="ethics-wizard__footer">${left}${right}</div>`;
+
+  /* One template per screen type. `ctx` supplies values derived from the data
+     set as a whole (total number of steps, which screen is first). */
+  const TEMPLATES = {
+    statement(screen, ctx) {
+      const left = ctx.isFirst
+        ? note(screen.footerNote ?? '')
+        : ghostBtn('← Back', 'back');
+      return head(screen) + footer(left, primaryBtn(screen.nextLabel, 'goto', screen.next));
+    },
+
+    question(screen, ctx) {
+      const uniList = screen.uniList
+        ? `<ul class="ethics-wizard__uni-list">${screen.uniList.map(u => `<li>${u}</li>`).join('')}</ul>`
+        : '';
+
+      /* "No" is rendered before "Yes" so the affirmative action sits on the
+         right, matching the primary button position elsewhere. */
+      const choice = (side, data) => `
+        <button type="button" class="ethics-wizard__choice ethics-wizard__choice--${side}"
+                data-action="answer" data-target="${data.next}">
+          <strong>${data.label}</strong><span>${data.sublabel}</span>
+        </button>`;
+
+      return `
+        ${head({ ...screen, eyebrow: `Question ${screen.progressStep} of ${ctx.totalSteps}` })}
+        ${uniList}
+        <div class="ethics-wizard__choices">
+          ${choice('no', screen.no)}
+          ${choice('yes', screen.yes)}
+        </div>
+        ${footer(ghostBtn('← Back', 'back'), note(`${screen.progressStep} / ${ctx.totalSteps}`))}`;
+    },
+
+    outcome(screen) {
+      const callout = screen.callout
+        ? `<div class="ethics-wizard__callout">${screen.callout}</div>`
+        : '';
+      const guidance = screen.guidanceLabel
+        ? primaryBtn(screen.guidanceLabel, 'guidance')
+        : '';
+      return head(screen) + callout + footer(ghostBtn('← Start over', 'restart'), guidance);
+    },
+  };
+
+
+  /* --- 4. Wizard — progress indicator ------------------------------------- */
+
+  function createProgress(totalSteps) {
+    const fillEl = document.getElementById('ew-track-fill');
+    const dotsEl = document.getElementById('ew-dots');
+
+    const dots = Array.from({ length: totalSteps }, (_, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'ethics-wizard__dot';
+      dot.textContent = String(i + 1);
+      dotsEl.appendChild(dot);
+      return dot;
+    });
+
+    /* The fill spans dot centres, so step 1 sits at 0% and the last at 100%. */
+    return function update(step) {
+      const span = Math.max(1, totalSteps - 1);
+      fillEl.style.width = `${(Math.max(step, 1) - 1) / span * 100}%`;
+
+      dots.forEach((dot, i) => {
+        const n = i + 1;
+        dot.className = 'ethics-wizard__dot'
+          + (n < step ? ' ethics-wizard__dot--done' : '')
+          + (n === step ? ' ethics-wizard__dot--current' : '');
+        dot.textContent = n < step ? '✓' : String(n);
+      });
+    };
+  }
+
+
+  /* --- 5. Wizard — navigation & rendering --------------------------------- */
+
+  function initWizard(screens) {
+    if (!Array.isArray(screens) || screens.length === 0) {
+      console.error('[wizard] No screens defined.');
+      return;
+    }
+
+    const cardEl = document.getElementById('ew-card');
+    const rootEl = document.getElementById('ethics-wizard');
+
+    const byId = new Map(screens.map(s => [s.id, s]));
+    const firstId = screens[0].id;
+    const totalSteps = Math.max(1, ...screens.map(s => s.progressStep ?? 0));
+    const updateProgress = createProgress(totalSteps);
+
+    warnOnBrokenLinks(screens, byId);
+
+    /* Build every screen once, then toggle [hidden]. */
+    const nodes = new Map();
+    for (const screen of screens) {
+      const template = TEMPLATES[screen.type];
+      if (!template) {
+        console.error(`[wizard] Screen "${screen.id}" has unknown type "${screen.type}".`);
+        continue;
+      }
+
+      const el = document.createElement('div');
+      el.className = 'ethics-wizard__screen'
+        + (screen.accentBar ? ' ethics-wizard__screen--accent' : '')
+        + (screen.tone ? ` ethics-wizard__screen--${screen.tone}` : '');
+      el.hidden = true;
+      el.innerHTML = template(screen, { totalSteps, isFirst: screen.id === firstId });
+
+      cardEl.appendChild(el);
+      nodes.set(screen.id, el);
+    }
+
+    let busy = false; // guards against double-clicks during the answer delay
+
+    function render(id, { scroll = true, focus = true } = {}) {
+      const el = nodes.get(id);
+      if (!el) {
+        console.error(`[wizard] Cannot show unknown screen "${id}".`);
+        return;
+      }
+
+      nodes.forEach(node => { node.hidden = true; });
+      el.hidden = false;
+      updateProgress(byId.get(id).progressStep ?? 0);
+
+      if (focus) el.querySelector('.ethics-wizard__title')?.focus({ preventScroll: true });
+      if (scroll) rootEl.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+      busy = false;
+    }
+
+    /* Simple internal stack — the wizard always starts fresh on page load. */
+    const stack = [firstId];
+
+    function goTo(id) {
+      if (!nodes.has(id)) {
+        console.error(`[wizard] Cannot navigate to unknown screen "${id}".`);
+        busy = false;
+        return;
+      }
+      stack.push(id);
+      render(id);
+    }
+
+    function goBack() {
+      if (stack.length > 1) {
+        stack.pop();
+        render(stack[stack.length - 1]);
+      }
+    }
+
+    cardEl.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-action]');
+      if (!el || busy) return;
+      const { action, target } = el.dataset;
+
+      switch (action) {
+        case 'goto':
+          goTo(target);
+          break;
+
+        case 'back':
+          goBack();
+          break;
+
+        case 'restart':
+          stack.length = 0;
+          stack.push(firstId);
+          render(firstId);
+          break;
+
+        case 'guidance':
+          document.getElementById('study-chars')
+            .scrollIntoView({ behavior: scrollBehavior() });
+          break;
+
+        case 'answer': {
+          busy = true;
+          el.closest('.ethics-wizard__choices')
+            .querySelectorAll('.ethics-wizard__choice')
+            .forEach(b => b.classList.remove('is-selected'));
+          el.classList.add('is-selected');
+          /* Brief pause so the selection is visible before the screen changes. */
+          setTimeout(() => goTo(target), reducedMotion.matches ? 0 : 250);
+          break;
+        }
+      }
+    });
+
+    render(firstId, { scroll: false, focus: false });
+  }
+
+  /* Dev-time check: a typo in a `next` id would otherwise fail silently. */
+  function warnOnBrokenLinks(screens, byId) {
+    for (const s of screens) {
+      for (const target of [s.next, s.yes?.next, s.no?.next]) {
+        if (target && !byId.has(target)) {
+          console.warn(`[wizard] Screen "${s.id}" points at missing screen "${target}".`);
+        }
+      }
+    }
+  }
+
+
+  /* --- 6. Study characteristics ------------------------------------------- */
+
+  function initChars(data) {
+    const el = document.getElementById('study-chars');
+
+    const subbox = (section, item, index) => `
+      <div class="study-chars__subbox">
+        <p class="study-chars__subbox-label">
+          <span class="study-chars__subbox-num" aria-hidden="true">${index + 1}</span>
+          ${section.label}
+        </p>
+        <p>${item[section.key] ?? section.placeholder}</p>
+      </div>`;
+
+    el.innerHTML = `
+      <h2 class="study-chars__title" id="study-chars-title">${data.title}</h2>
+      <p class="study-chars__intro">${data.intro}</p>
+      <div class="study-chars__list">
+        ${data.items.map(item => `
+          <details class="study-chars__item" id="${item.id}">
+            <summary class="study-chars__summary">
+              <span class="study-chars__icon">${icon(item.icon)}</span>
+              <span class="study-chars__item-title">${item.title}</span>
+              <svg class="study-chars__chevron" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                   stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </summary>
+            <div class="study-chars__body">
+              ${data.sections.map((section, i) => subbox(section, item, i)).join('')}
+            </div>
+          </details>`).join('')}
+      </div>`;
+
+    /* Deep link: /#personal-data opens and scrolls to that characteristic. */
+    const openFromHash = () => {
+      const id = location.hash.slice(1);
+      const item = id && el.querySelector(`#${CSS.escape(id)}`);
+      if (!item) return;
+      item.open = true;
+      item.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
+    };
+    openFromHash();
+    window.addEventListener('hashchange', openFromHash);
+
+    /* Researchers print this guidance for their application, so expand
+       everything for the print job and restore afterwards. */
+    const items = () => el.querySelectorAll('.study-chars__item');
+    window.addEventListener('beforeprint', () => {
+      items().forEach(d => { d.dataset.wasOpen = d.open; d.open = true; });
+    });
+    window.addEventListener('afterprint', () => {
+      items().forEach(d => { d.open = d.dataset.wasOpen === 'true'; delete d.dataset.wasOpen; });
+    });
+  }
+
+
+  /* --- 7. Boot ------------------------------------------------------------ */
+
+  const wizardData = readJson('wizard-data');
+  if (wizardData) initWizard(wizardData);
+
+  const charsData = readJson('chars-data');
+  if (charsData) initChars(charsData);
+})();
+</script>
+
+</body>
 </html>
