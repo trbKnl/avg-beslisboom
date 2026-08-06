@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ethics Wizard — Data Donation</title>
+  <title>Ethics Application Guide — Data Donation</title>
   <link rel="stylesheet" href="https://datadonation.eu/assets/css/main.css">
 
   <style>
@@ -394,7 +394,6 @@
   }
 
   .study-chars__intro {
-    max-width: 62ch;
     margin: 0 0 36px;
     color: var(--dd-ink-muted);
     font-size: var(--dd-size-md);
@@ -512,9 +511,71 @@
   }
 
 
-  /* --- 8. Responsive, reduced motion, print -------------------------------- */
+  /* --- 8. Page header ------------------------------------------------------ */
+
+  .page-header {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 64px 24px 0;
+  }
+
+  .page-header__title {
+    margin: 0 0 16px;
+    color: var(--dd-ink);
+    font-family: var(--dd-font-display);
+    font-size: 32px;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+
+  .page-header__lead {
+    margin: 0 0 12px;
+    color: var(--dd-ink-muted);
+    font-size: var(--dd-size-lg);
+    line-height: 1.7;
+  }
+
+  .page-header__steps {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    margin: 28px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .page-header__step {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    font-size: var(--dd-size-md);
+    color: var(--dd-ink-muted);
+  }
+
+  .page-header__step-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--dd-blue);
+    color: var(--dd-surface);
+    font-family: var(--dd-font-display);
+    font-size: var(--dd-size-xs);
+    font-weight: 700;
+    flex-shrink: 0;
+    position: relative;
+    top: 2px;
+  }
+
+
+  /* --- 9. Responsive, reduced motion, print -------------------------------- */
 
   @media (max-width: 600px) {
+    .page-header            { padding: 40px 16px 0; }
+    .page-header__title     { font-size: 26px; }
+    .page-header__steps     { flex-direction: column; gap: 12px; }
     .ethics-wizard          { padding: 32px 16px; }
     .ethics-wizard__card    { padding: 24px; }
     .ethics-wizard__choices { flex-direction: column; }
@@ -771,6 +832,29 @@
      ========================================================================== -->
 
 <main id="main-content" class="site-main">
+
+  <header class="page-header">
+    <h1 class="page-header__title">Ethics application guide for data donation studies</h1>
+    <p class="page-header__lead">
+      Before a data donation study can begin, it needs to be approved by an ethical review board.
+      Depending on the type of data you collect and whether a Data Protection Impact Assessment (DPIA) is required,
+      the application process can look quite different. This tool helps you navigate that process.
+    </p>
+    <p class="page-header__lead">
+      Start with the wizard below to determine your situation, then review the study characteristics
+      to find ready-made texts you can use in your ethics application.
+    </p>
+    <ol class="page-header__steps">
+      <li class="page-header__step">
+        <span class="page-header__step-num">1</span>
+        Complete the wizard to determine your situation
+      </li>
+      <li class="page-header__step">
+        <span class="page-header__step-num">2</span>
+        Review the study characteristics that apply to your study
+      </li>
+    </ol>
+  </header>
 
   <section class="ethics-wizard" id="ethics-wizard" aria-label="Ethics application wizard">
     <!-- Decorative: the current step is also stated in words on each screen. -->
